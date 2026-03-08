@@ -455,6 +455,7 @@ Respond ONLY with a valid JSON array (no markdown, no backticks, no extra text):
   const saveToCookbook = async () => {
   if (!madeModal) return
   setSaving(true)
+  console.log("madeModal at save time:", JSON.stringify(madeModal))  // 👈 add this
   const { data, error } = await sb.from("cookbook").insert({ 
     user_id: user.id, 
     name: madeModal.name, 
@@ -463,8 +464,9 @@ Respond ONLY with a valid JSON array (no markdown, no backticks, no extra text):
     stars, 
     notes, 
     people, 
-    recipe_data: madeModal   // 👈 this is the only thing that was missing
+    recipe_data: madeModal
   }).select().single()
+  console.log("insert result:", data, error)  // 👈 and this
   if (data) setCookbook(c => [data, ...c])
   setMadeModal(null); setStars(0); setNotes(""); setSaving(false)
   }
