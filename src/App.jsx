@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { sb } from "./supabase"
 
 const MODEL = "llama-3.3-70b-versatile"
-const GROQ_KEY = import.meta.env.VITE_GROQ_API_KEY
+const GROQ_KEY = ""
 
 async function llm(prompt) {
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -453,20 +453,11 @@ Respond ONLY with a valid JSON array (no markdown, no backticks, no extra text):
   }
 
   const saveToCookbook = async () => {
-  if (!madeModal) return
-  setSaving(true)
-  const { data } = await sb.from("cookbook").insert({
-    user_id: user.id,
-    name: madeModal.name,
-    emoji: madeModal.emoji,
-    description: madeModal.description,
-    stars,
-    notes,
-    people,
-    recipe_data: madeModal   
-  }).select().single()
-  if (data) setCookbook(c => [data, ...c])
-  setMadeModal(null); setStars(0); setNotes(""); setSaving(false)
+    if (!madeModal) return
+    setSaving(true)
+    const { data } = await sb.from("cookbook").insert({ user_id: user.id, name: madeModal.name, emoji: madeModal.emoji, description: madeModal.description, stars, notes, people, recipe_data: madeModal }).select().single()
+    if (data) setCookbook(c => [data, ...c])
+    setMadeModal(null); setStars(0); setNotes(""); setSaving(false)
   }
 
   const deleteCookbookEntry = async (id) => {
@@ -821,18 +812,97 @@ Respond ONLY with a valid JSON array (no markdown, no backticks, no extra text):
                 <p>Cook a recipe and tap <strong>"Made it!"</strong> to save it here.</p>
                 <button className="btn btn-rust" style={{marginTop:16}} onClick={()=>setTab("recipes")}>Find a recipe</button>
               </div>
-            : cookbook.map(e => (
-                <div key={e.id} className="ck-card">
-                  <span className="ck-emoji">{e.emoji||"🍽️"}</span>
-                  <div className="ck-body">
-                    <div className="ck-name">{e.name}</div>
-                    <div className="ck-date">{new Date(e.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})} · {e.people} {e.people===1?"person":"people"}</div>
-                    {e.stars > 0 && <div className="ck-stars">{"★".repeat(e.stars)}{"☆".repeat(5-e.stars)}</div>}
-                    {e.notes && <div className="ck-notes">"{e.notes}"</div>}
+            : cookbook.map(e => {
+                const r = e.recipe_data
+                const isOpen = expanded === e.id
+                return (
+                  <div key={e.id} className="r-card" style={{marginBottom:15}}>
+                    {/* Header */}
+                    <div className="r-head">
+                      <span className="r-emoji">{e.emoji||"🍽️"}</span>
+                      <div className="r-meta" style={{flex:1}}>
+                        <div className="r-name">{e.name}</div>
+                        <div style={{fontSize:12,color:"var(--muted)",marginBottom:6}}>
+                          {new Date(e.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
+                          {" · "}{e.people} {e.people===1?"person":"people"}
+                        </div>
+                        {e.stars > 0 && <div className="ck-stars" style={{marginBottom:4}}>{"★".repeat(e.stars)}{"☆".repeat(5-e.stars)}</div>}
+                        {e.notes && <div className="ck-notes">"{e.notes}"</div>}
+                        {r?.flavourProfile && (
+                          <div className="r-badges" style={{marginTop:8}}>
+                            {r.flavourProfile.map(f=><span key={f} className="badge b-flavour">{f}</span>)}
+                          </div>
+                        )}
+                      </div>
+                      <button className="ck-del" onClick={()=>deleteCookbookEntry(e.id)}>×</button>
+                    </div>
+
+                    {/* Timing bar — only if full recipe saved */}
+                    {r && (
+                      <div className="r-timing">
+                        <div className="r-timing-item"><span className="tl">Prep</span><span className="tv">{r.prepTime||"—"}</span></div>
+                        <div className="r-timing-item"><span className="tl">Cook</span><span className="tv">{r.cookTime||r.time||"—"}</span></div>
+                        <div className="r-timing-item"><span className="tl">Calories</span><span className="tv">{r.calories} kcal</span></div>
+                        <div className="r-timing-item"><span className="tl">Difficulty</span><span className="tv">{r.difficulty||"—"}</span></div>
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="r-footer">
+                      {r ? (
+                        <div className="r-stats">
+                          <span>🥩 {r.protein}</span>
+                          <span>🌾 {r.carbs}</span>
+                          <span>🫙 {r.fat}</span>
+                        </div>
+                      ) : <div/>}
+                      {r && (
+                        <button className="expand-btn" onClick={()=>setExpanded(isOpen ? null : e.id)}>
+                          {isOpen ? "▲ Hide recipe" : "▼ Full recipe"}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Expanded full recipe */}
+                    {r && isOpen && (
+                      <div className="r-detail">
+                        {r.whyItWorks && <div className="r-why" style={{marginBottom:16}}>💡 {r.whyItWorks}</div>}
+                        <div className="nut-row">
+                          {[["Calories",r.calories+"kcal"],["Protein",r.protein],["Carbs",r.carbs],["Fat",r.fat],["Fibre",r.fibre||"—"]].map(([l,v])=>(
+                            <div key={l} className="nut"><div className="v">{v}</div><div className="l">{l}</div></div>
+                          ))}
+                        </div>
+                        <div className="detail-grid">
+                          <div className="d-sec">
+                            <h4>🧺 Ingredients</h4>
+                            <ul className="ing-list">{r.ingredients?.map((x,j)=><li key={j}>{x}</li>)}</ul>
+                          </div>
+                          <div className="d-sec">
+                            <h4>👨‍🍳 Method</h4>
+                            <ol className="step-list">{r.steps?.map((s,j)=><li key={j}><span className="sn">{j+1}</span><span>{s}</span></li>)}</ol>
+                          </div>
+                        </div>
+                        {r.tips && (
+                          <div className="tips-section">
+                            <h4>Chef's Tips</h4>
+                            <div className="tips-grid">
+                              {(Array.isArray(r.tips) ? r.tips : [r.tips]).map((tip,j)=>(
+                                <div key={j} className="tip-item">
+                                  <div className="tip-label">{["💡 Substitution","🔪 Technique","🍽️ Serving"][j]||"💡 Tip"}</div>
+                                  {tip}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {r.servingSuggestion && (
+                          <div className="serving-row"><b>🥗 Serve with:</b> {r.servingSuggestion}</div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <button className="ck-del" onClick={()=>deleteCookbookEntry(e.id)}>×</button>
-                </div>
-              ))
+                )
+              })
           }
         </div>
       )}
