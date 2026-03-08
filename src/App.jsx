@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
 import { sb } from "./supabase"
+const GROQ_KEY = import.meta.env.VITE_GROQ_API_KEY
 
 const MODEL = "llama-3.3-70b-versatile"
-const GROQ_KEY = ""
 
 async function llm(prompt) {
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -455,7 +455,6 @@ Respond ONLY with a valid JSON array (no markdown, no backticks, no extra text):
   const saveToCookbook = async () => {
   if (!madeModal) return
   setSaving(true)
-  console.log("madeModal at save time:", JSON.stringify(madeModal))  // 👈 add this
   const { data, error } = await sb.from("cookbook").insert({ 
     user_id: user.id, 
     name: madeModal.name, 
