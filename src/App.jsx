@@ -453,11 +453,20 @@ Respond ONLY with a valid JSON array (no markdown, no backticks, no extra text):
   }
 
   const saveToCookbook = async () => {
-    if (!madeModal) return
-    setSaving(true)
-    const { data } = await sb.from("cookbook").insert({ user_id: user.id, name: madeModal.name, emoji: madeModal.emoji, description: madeModal.description, stars, notes, people, recipe_data: madeModal }).select().single()
-    if (data) setCookbook(c => [data, ...c])
-    setMadeModal(null); setStars(0); setNotes(""); setSaving(false)
+  if (!madeModal) return
+  setSaving(true)
+  const { data, error } = await sb.from("cookbook").insert({ 
+    user_id: user.id, 
+    name: madeModal.name, 
+    emoji: madeModal.emoji, 
+    description: madeModal.description, 
+    stars, 
+    notes, 
+    people, 
+    recipe_data: madeModal   // 👈 this is the only thing that was missing
+  }).select().single()
+  if (data) setCookbook(c => [data, ...c])
+  setMadeModal(null); setStars(0); setNotes(""); setSaving(false)
   }
 
   const deleteCookbookEntry = async (id) => {
